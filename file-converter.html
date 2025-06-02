@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>File Converters - FreeToolDock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #f9fafb; }
+    header { background: #1e40af; color: white; padding: 1rem; text-align: center; }
+    main { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 8px; }
+    nav a { color: #1e40af; margin-right: 1rem; text-decoration: none; }
+    nav { margin-bottom: 1rem; }
+    section { margin-bottom: 2rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    input[type="file"] { margin-bottom: 1rem; }
+    button { background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #convertOutput { margin-top: 1rem; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>File Converters - FreeToolDock</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="pdf-tools.html">PDF Tools</a>
+      <a href="ai-tools.html">AI Tools</a>
+      <a href="media-tools.html">Media Tools</a>
+      <a href="ocr.html">OCR</a>
+    </nav>
+  </header>
+  <main>
+    <!-- JPG to PNG converter -->
+    <section>
+      <h2>JPG to PNG Converter</h2>
+      <label for="jpgInput">Select JPG image:</label>
+      <input type="file" id="jpgInput" accept="image/jpeg" />
+      <button id="jpgToPngBtn" disabled>Convert to PNG</button>
+      <div id="convertOutput"></div>
+    </section>
+
+    <!-- PDF to Word converter (basic demo: extract text) -->
+    <section>
+      <h2>PDF to Word Converter (Basic)</h2>
+      <label for="pdfToWordInput">Select PDF file:</label>
+      <input type="file" id="pdfToWordInput" accept="application/pdf" />
+      <button id="pdfToWordBtn" disabled>Convert to Word</button>
+      <div id="pdfTextOutput" style="white-space: pre-wrap; background: #e2e8f0; padding: 1rem; border-radius: 6px; min-height: 100px;"></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    // JPG to PNG
+    const jpgInput = document.getElementById('jpgInput');
+    const jpgToPngBtn = document.getElementById('jpgToPngBtn');
+    const convertOutput = document.getElementById('convertOutput');
+
+    jpgInput.addEventListener('change', () => {
+      jpgToPngBtn.disabled = !jpgInput.files.length;
+      convertOutput.innerHTML = '';
+    });
+
+    jpgToPngBtn.addEventListener('click', () => {
+      const file = jpgInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            convertOutput.innerHTML = `<img src="${url}" style="max-width: 100%; height: auto; border: 1px solid #ccc;" /><br><a href="${url}" download="converted.png">Download PNG</a>`;
+          }, 'image/png');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // PDF to Word (extract text with pdf.js)
+    const pdfToWordInput = document.getElementById('pdfToWordInput');
+    const pdfToWordBtn = document.getElementById('pdfToWordBtn');
+    const pdfTextOutput = document.getElementById('pdfTextOutput');
+
+    pdfToWordInput.addEventListener('change', () => {
+      pdfToWordBtn.disabled = !pdfToWordInput.files.length;
+      pdfTextOutput.textContent = '';
+    });
+
+    pdfToWordBtn.addEventListener('click', async () => {
+      pdfToWordBtn.disabled = true;
+      const file = pdfToWordInput.files[0];
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+      pdfTextOutput.textContent = fullText || 'No text found in PDF.';
+      pdfToWordBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
