@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCR - FreeToolDock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #f9fafb; }
+    header { background: #1e40af; color: white; padding: 1rem; text-align: center; }
+    main { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 8px; }
+    nav a { color: #1e40af; margin-right: 1rem; text-decoration: none; }
+    nav { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    textarea { width: 100%; min-height: 200px; padding: 0.5rem; font-size: 1rem; border-radius: 5px; border: 1px solid #ccc; }
+    button { background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Online OCR - FreeToolDock</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="pdf-tools.html">PDF Tools</a>
+      <a href="ai-tools.html">AI Tools</a>
+      <a href="media-tools.html">Media Tools</a>
+      <a href="file-converter.html">File Converters</a>
+    </nav>
+  </header>
+  <main>
+    <label for="ocrInput">Select image file (JPEG, PNG):</label>
+    <input type="file" id="ocrInput" accept="image/jpeg,image/png" />
+    <button id="ocrBtn" disabled>Extract Text</button>
+    <textarea id="ocrOutput" readonly></textarea>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script>
+    const ocrInput = document.getElementById('ocrInput');
+    const ocrBtn = document.getElementById('ocrBtn');
+    const ocrOutput = document.getElementById('ocrOutput');
+
+    ocrInput.addEventListener('change', () => {
+      ocrBtn.disabled = !ocrInput.files.length;
+      ocrOutput.value = '';
+    });
+
+    ocrBtn.addEventListener('click', () => {
+      if (!ocrInput.files.length) return;
+      ocrBtn.disabled = true;
+      ocrOutput.value = 'Processing...';
+      const file = ocrInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        Tesseract.recognize(
+          e.target.result,
+          'eng',
+          { logger: m => console.log(m) }
+        ).then(({ data: { text } }) => {
+          ocrOutput.value = text || 'No text detected.';
+          ocrBtn.disabled = false;
+        }).catch(() => {
+          ocrOutput.value = 'Failed to recognize text.';
+          ocrBtn.disabled = false;
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
+</body>
+</html>
