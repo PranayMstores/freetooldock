@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Media Tools - FreeToolDock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@1.0.15/dist/browser-image-compression.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #f9fafb; }
+    header { background: #1e40af; color: white; padding: 1rem; text-align: center; }
+    main { max-width: 900px; margin: 2rem auto; padding: 1rem; background: white; border-radius: 8px; }
+    nav a { color: #1e40af; margin-right: 1rem; text-decoration: none; }
+    nav { margin-bottom: 1rem; }
+    section { margin-bottom: 2rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    input[type="file"] { margin-bottom: 1rem; }
+    button { background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 5px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    #imgResult, #videoResult { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Image & Video Compressor - FreeToolDock</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="pdf-tools.html">PDF Tools</a>
+      <a href="ai-tools.html">AI Tools</a>
+      <a href="file-converter.html">File Converters</a>
+      <a href="ocr.html">OCR</a>
+    </nav>
+  </header>
+  <main>
+    <!-- Image Compressor -->
+    <section>
+      <h2>Image Compressor</h2>
+      <label for="imgInput">Select an image (JPEG, PNG):</label>
+      <input type="file" id="imgInput" accept="image/jpeg,image/png" />
+      <button id="compressImgBtn" disabled>Compress Image</button>
+      <div id="imgResult"></div>
+    </section>
+
+    <!-- Video Compressor -->
+    <section>
+      <h2>Video Compressor (MP4 only)</h2>
+      <label for="videoInput">Select a video (MP4):</label>
+      <input type="file" id="videoInput" accept="video/mp4" />
+      <button id="compressVideoBtn" disabled>Compress Video</button>
+      <div id="videoResult"></div>
+    </section>
+  </main>
+
+  <script>
+    const imgInput = document.getElementById('imgInput');
+    const compressImgBtn = document.getElementById('compressImgBtn');
+    const imgResult = document.getElementById('imgResult');
+
+    imgInput.addEventListener('change', () => {
+      compressImgBtn.disabled = !imgInput.files.length;
+      imgResult.innerHTML = '';
+    });
+
+    compressImgBtn.addEventListener('click', async () => {
+      compressImgBtn.disabled = true;
+      const file = imgInput.files[0];
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true
+      };
+      try {
+        const compressedFile = await imageCompression(file, options);
+        const url = URL.createObjectURL(compressedFile);
+        imgResult.innerHTML = `
+          <p>Original Size: ${(file.size / 1024).toFixed(2)} KB</p>
+          <p>Compressed Size: ${(compressedFile.size / 1024).toFixed(2)} KB</p>
+          <img src="${url}" alt="Compressed Image" style="max-width: 100%; height: auto; border: 1px solid #ccc;" />
+          <br><a href="${url}" download="compressed-image.jpg">Download Compressed Image</a>
+        `;
+      } catch (error) {
+        imgResult.textContent = 'Compression failed: ' + error.message;
+      }
+      compressImgBtn.disabled = false;
+    });
+
+    // Video compression with ffmpeg.wasm
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+    const videoInput = document.getElementById('videoInput');
+    const compressVideoBtn = document.getElementById('compressVideoBtn');
+    const videoResult = document.getElementById('videoResult');
+
+    videoInput.addEventListener('change', () => {
+      compressVideoBtn.disabled = !videoInput.files.length;
+      videoResult.innerHTML = '';
+    });
+
+    compressVideoBtn.addEventListener('click', async () => {
+      compressVideoBtn.disabled = true;
+      if (!ffmpeg.isLoaded()) {
+        await ffmpeg.load();
+      }
+      const file = videoInput.files[0];
+      const fileName = 'input.mp4';
+      const outputFileName = 'output.mp4';
+
+      ffmpeg.FS('writeFile', fileName, await fetchFile(file));
+      // Simple re-encode with lower bitrate to compress
+      await ffmpeg.run('-i', fileName, '-b:v', '1000k', outputFileName);
+
+      const data = ffmpeg.FS('readFile', outputFileName);
+      const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(videoBlob);
+      videoResult.innerHTML = `
+        <video controls src="${url}" style="max-width: 100%;"></video><br>
+        <a href="${url}" download="compressed-video.mp4">Download Compressed Video</a>
+      `;
+      compressVideoBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
